@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>รวยรวย เฮงเฮง</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #fef9f5;
+      text-align: center;
+      padding: 20px;
+    }
+
+    h2 {
+      margin-bottom: 15px;
+      font-size: 14px;
+      color: black;
+    }
+
+    .buttons button {
+      font-size: 10px;
+      padding: 10px 20px;
+      margin: 8px;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      min-width: 12px;
+    }
+
+    .player { background-color: #6fa8dc; }
+    .banker { background-color: #e06666; }
+    .tie    { background-color: #93c47d; }
+
+    .control-buttons {
+      margin-top: 10px;
+    }
+
+    .control-buttons button {
+      background-color: black;
+      color: white;
+      padding: 4px 8px;
+      margin: 5px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .stats {
+      margin-top: 15px;
+      font-weight: bold;
+      word-wrap: break-word;
+      text-align: center;
+    }
+
+    .ai-suggestion {
+      background-color: #fff3cd;
+      color: black;
+      font-weight: bold;
+      padding: 6px 10px;
+      border-radius: 6px;
+      display: inline-block;
+      margin-top: 10px;
+    }
+
+    .bigroad {
+      display: grid;
+      grid-template-columns: repeat(20, 14px);
+      grid-auto-rows: 14px;
+      gap: 5px;
+      justify-content: flex-start;
+      overflow-x: auto;
+    }
+
+    .small {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      font-size: 12px;
+      line-height: 10px;
+    }
+
+    .P { background-color: 
+       blue; }
+    .B { background-color: 
+       red; }
+    .T { background-color: 
+       green; }
+       
+    .section h3 {
+      border-radius: 6px;
+      padding: 6px 12px;
+      color: white;
+      background-color: darkred;
+      text-align: center;
+      margin-left: 0px;
+      padding-left: 10px; }
+
+    #aiResultTrack {
+      text-align: left;
+      margin-left: 10px;
+      font-size: 16px;
+    }
+
+    #aiResultDisplay {
+      font-size: 12px;
+    }
+
+    .count-P { color: #007bff; }
+    .count-B { color: #dc3545; }
+    .count-T { color: #28a745; }
+    .count-total { color: blue; }
+
+    @media (max-width: 600px) {
+      .buttons button {
+        font-size: 25px;
+        padding: 12px 20px;
+      }
+      .control-buttons button {
+        font-size: 13px;
+        padding: 8px 10px;
+      }
+
+      h2 { font-size: 22px; }
+      .stats { font-size: 16px; text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+  <h2>หมวยมันอ่อน</h2>
+
+  <div class="buttons">
+    <button class="player" onclick="addResult('P')">P</button>
+    <button class="banker" onclick="addResult('B')">B</button>
+    <button class="tie" onclick="addResult('T')">T</button>
+  </div>
+
+  <div class="control-buttons">
+ <button onclick="undoLast()">ย้อนกลับ</button>
+  <button onclick="clearAll()">เริ่มใหม่</button>
+  <button onclick="saveFullPage()">📸 บันทึกภาพ</button>
+   </div>
+
+  <div class="stats" id="statsDisplay">P: 0 | B: 0 | T: 0</div>
+  <div class="stats" id="aiSuggestionDisplay">AI: -</div>
+  <div class="stats" id="aiResultDisplay">ผลล่าสุด>>> ✅0 ❌0</div>
+  <div class="stats" id="aiResultTrack">#DNA#<br>รอผลทำนาย...</div>
+
+  <div class="section">
+    <h3>เค้าไพ่หลัก</h3>
+    <div class="bigroad" 
+    id="bigRoadGrid"></div>
+  </div>
+
+<script>
+  const bigRoadGrid = document.getElementById("bigRoadGrid");
+  const statsDisplay = document.getElementById("statsDisplay");
+  const aiSuggestionDisplay = document.getElementById("aiSuggestionDisplay");
+  const aiResultDisplay = document.getElementById("aiResultDisplay");
+  const aiResultTrack = document.getElementById("aiResultTrack");
+
+  let results = [];
+  let aiPrediction = null;
+  let aiCorrect = 0;
+  let aiWrong = 0;
+  let aiTrack = [];
+
+  function addResult(result) {
+    results.push(result);
+
+    let roundResult = "-";
+    if (aiPrediction && (result === "P" || result === "B")) {
+      if (aiPrediction === result) {
+        aiCorrect++;
+        roundResult = `<span style="color:green;font-size:12px;">✅</span>`;
+      } else {
+        aiWrong++;
+        roundResult = `<span style="color:red;font-size:12px;">❌</span>`;
+      }
+      aiTrack.push(roundResult);
+      renderTrack();
+    }
+
+    aiResultDisplay.innerHTML = `ผลล่าสุด ${roundResult} | ✅: ${aiCorrect} ❌: ${aiWrong}`;
+    aiPrediction = null;
+    updateDisplay();
+  }
+
+  function renderTrack() {
+    if (aiTrack.length === 0) {
+      aiResultTrack.innerHTML = "#DNA#<br>รอผลทำนาย...";
+      return;
+    }
+
+    const rows = [];
+    for (let i = 0; i < aiTrack.length; i += 18) {
+      rows.push(aiTrack.slice(i, i + 18).join(""));
+    }
+
+    aiResultTrack.innerHTML = "#DNA#<br>" + rows.join("<br>");
+  }
+
+  function undoLast() {
+    if (results.length > 0) {
+      results.pop();
+      updateDisplay();
+    }
+  }
+
+  function clearAll() {
+    if (confirm("ล้างข้อมูลทั้งหมด?")) {
+      results = [];
+      aiPrediction = null;
+      aiCorrect = 0;
+      aiWrong = 0;
+      aiTrack = [];
+      localStorage.removeItem("baccaratResults");
+      aiSuggestionDisplay.textContent = "AI: -";
+      aiResultDisplay.innerHTML = "ผลล่าสุด - | ✅: 0 ❌: 0";
+      aiResultTrack.innerHTML = "#DNA#<br>รอผลทำนาย...";
+      updateDisplay();
+    }
+  }
+
+  function updateDisplay() {
+    renderBigRoad();
+    updateStats();
+    suggestNextBet();
+    localStorage.setItem("baccaratResults", JSON.stringify(results));
+  }
+
+  function updateStats() {
+    const count = { P: 0, B: 0, T: 0 };
+    for (let r of results) {
+      if (count[r] !== undefined) count[r]++;
+    }
+    const total = count.P + count.B + count.T;
+
+    statsDisplay.innerHTML = `
+      <span class="count-P">P: ${count.P}</span>  
+      <span class="count-B">B: ${count.B}</span>  
+      <span class="count-T">T: ${count.T}</span>  
+      <span class="count-total">รวม ${total}</span>
+    `;
+  }
+
+  function renderBigRoad() {
+    bigRoadGrid.innerHTML = "";
+    let col = 1, row = 2;
+    let prev = null;
+
+    for (let i = 0; i < results.length; i++) {
+      let curr = results[i];
+      if (curr === "T") continue;
+
+      if (curr !== prev) {
+        col++;
+        row = 0;
+      } else {
+        row++;
+        if (row >= 6) {
+          col++;
+          row = 0;
+        }
+      }
+
+      const cell = document.createElement("div");
+      cell.className = `small cell ${curr}`;
+      cell.textContent = "";
+      cell.style.gridColumn = col;
+      cell.style.gridRow = row + 1;
+      bigRoadGrid.appendChild(cell);
+
+      prev = curr;
+    }
+  }
+
+  function suggestNextBet() {
+    const lastResults = results.filter(r => r !== "T");
+    const len = lastResults.length;
+
+    if (len < 5) {
+      aiSuggestionDisplay.innerHTML = `<span class="ai-suggestion">AI: กำลังรอข้อมูล (5 ตาขึ้นไป)</span>`;
+      aiPrediction = null;
+      return;
+    }
+
+    const last = lastResults[len - 1];
+    const last2 = lastResults[len - 2];
+    const last3 = lastResults[len - 3];
+    const last4 = lastResults[len - 4];
+    const last5 = lastResults[len - 5];
+
+    if ([last2, last3, last4].every(r => r === last)) {
+      aiPrediction = last;
+      aiSuggestionDisplay.innerHTML = `<span class="ai-suggestion">AI: มังกรยาว → แทง ${fullName(aiPrediction)}</span>`;
+      return;
+    }
+
+    if (last5 !== last4 && last4 !== last3 && last3 !== last2 && last2 !== last && last !== last3) {
+      aiPrediction = last === "P" ? "B" : "P";
+      aiSuggestionDisplay.innerHTML = `<span class="ai-suggestion">AI: ปิงปอง → แทง ${fullName(aiPrediction)}</span>`;
+      return;
+    }
+
+    if (len >= 6 &&
+        lastResults[len - 6] === lastResults[len - 5] &&
+        lastResults[len - 4] === lastResults[len - 3] &&
+        lastResults[len - 2] === lastResults[len - 1] &&
+        lastResults[len - 5] !== lastResults[len - 3] &&
+        lastResults[len - 3] !== lastResults[len - 1]
+    ) {
+      aiPrediction = last === "P" ? "B" : "P";
+      aiSuggestionDisplay.innerHTML = `<span class="ai-suggestion">AI: ตัดสอง → แทง ${fullName(aiPrediction)}</span>`;
+      return;
+    }
+
+    if (last2 === last3 && last === last2 && last !== last4) {
+      aiPrediction = last === "P" ? "B" : "P";
+      aiSuggestionDisplay.innerHTML = `<span class="ai-suggestion">AI: สลับซ้ำ → แทง ${fullName(aiPrediction)}</span>`;
+      return;
+    }
+
+    aiPrediction = last;
+    aiSuggestionDisplay.innerHTML = `<span class="ai-suggestion">AI: ตามน้ำ → แทง ${fullName(aiPrediction)}</span>`;
+  }
+
+  function fullName(r) {
+    return r === "P" ? "Player" : r === "B" ? "Banker" : "Tie";
+  }
+
+  window.onload = () => {
+    const saved = localStorage.getItem("baccaratResults");
+    if (saved) {
+      results = JSON.parse(saved);
+      updateDisplay();
+    }
+  };
+</script>
+
+<!-- โหลด html2canvas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+  function saveFullPage() {
+    if (!confirm("บันทึกภาพหน้านี้ใช่หรือไม่?")) {
+      return; // ยกเลิกถ้าผู้ใช้ไม่ยืนยัน
+    }
+    
+    html2canvas(document.body, {
+      backgroundColor: "#ffffff",
+      scale: 2,
+      scrollY: -window.scrollY
+    }).then(canvas => {
+      const link = document.createElement("a");
+      const now = new Date();
+      const fileName = `บันทึก_${now.toLocaleDateString("th-TH").replace(/\//g, "-")}_${now.toLocaleTimeString("th-TH").replace(/:/g, "-")}.jpeg`;
+      link.download = fileName;
+      link.href = canvas.toDataURL("image/jpeg", 0.92);
+      link.click();
+    });
+  }
+</script>
+</body>
+</html>
